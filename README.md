@@ -1,68 +1,156 @@
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Make your own list virtualization
 
-## Available Scripts
+There are a few libraries avaliable if you need to virtualize long lists and improve your page performance. The biggest problem I faced with those libraries is that they are too heavy and sometimes our lists are not as simple as the library is expecting it to be! So let's make our own customized virtualization!
 
-In the project directory, you can run:
+## The virtualization principle
 
-### `yarn start`
+Do not render if is not in our field of view. The picture bellow show we can deal with it.
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+![Virtualization diagram](/virtualization-diagram.png)
 
-The page will reload if you make edits.<br />
-You will also see any lint errors in the console.
+## Let's code!
 
-### `yarn test`
+### The problem
+Our challange is to virtualize a page from a large groucery store that lists all its items inside categories in a single page.  
 
-Launches the test runner in the interactive watch mode.<br />
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+### Starting the solution
+To begin we need a function that will tell us if the components in our list are visible or not. We can achieve that by checking if: 
 
-### `yarn build`
+1) the distance from the bottom of our component to the top of the page is grater than zero; and 
+2) the distance from the top of our component to the bottom of the page is less than the page height.
 
-Builds the app for production to the `build` folder.<br />
-It correctly bundles React in production mode and optimizes the build for the best performance.
+What means that our component is inside the visible part of our browser's page.
 
-The build is minified and the filenames include the hashes.<br />
-Your app is ready to be deployed!
+    function isVisible({ top, height, offset }) {
+	    return (top  +  offset  +  height  >=  0  &&  top  -  offset  <=  window.innerHeight);
+    }
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+### Listening to the scroll event
+Now that we know the math to calculate if component is visible, it's time to attach a function to listen to the scroll event. 
 
-### `yarn eject`
+    useEffect(()  =>  { 
+	    const isInViewport = () => {};
+	    
+	    // we run the function to measure the visibility as soon as the component mount
+	    isInViewport();
+		window.addEventListener('scroll',  isInViewport);
 
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
+		return  ()  =>  {
+			window.removeEventListener('scroll',  isInViewport);
+		};
+	},  []);
 
-If you aren’t satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Referencing the category container
+With the useRef hook we have access to the container rect information that is needed in the isVisible function, so we can set its visibility to a state.
 
-Instead, it will copy all the configuration files and the transitive dependencies (Webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you’re on your own.
+    const isInViewport = () => {
+	    const offset = 500;
+	    if (containerRef.current) {
+			const { top, height } =  containerRef.current.getBoundingClientRect();
+			setIsContainerVisible(isVisible({ top, height, offset }));
+		} else {
+			setIsContainerVisible(false);
+		}
+	};
 
-You don’t have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn’t feel obligated to use this feature. However we understand that this tool wouldn’t be useful if you couldn’t customize it when you are ready for it.
+### Calculating the category container hight 
+To avoid having the page changing height, we must calculate the container height. In this case, we have a grid with two columns.
 
-## Learn More
+    const containerHeight = useMemo(()  =>  {
+		return Math.ceil(items.length  /  2  -  1)  *  30 + Math.ceil(items.length  /  2)  *  260;    
+    }, [items.length]);
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+### Virtualizing the items
+The items ref must be a array, so we can evaluate all of then at each isInViewport call. 
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+	    const isInViewport = () => {
+    	    const offset = 500;
+    	    
+    	    ...
+    	    
+			const cardVisibility = items.map((_, itemIndex) => {
+				const card = cardRef.current[itemIndex];
+				if (card) {
+					const { top, height } = card.getBoundingClientRect();
+					return isVisible({ top, height, offset });
+				}
+				return index < 2; // renders the two first categories if evaluation is not possible what is good for server side rendering
+	        });
+			setIsCardVisible(cardVisiblity);
+    	};
 
-### Code Splitting
+##  The final component
+With a few lines of code we have made ourselves a virtualized list! There are way more room to improvement, but the point is proved! It is not that hard!
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/code-splitting
+    import React, { useEffect, useState, useRef, useMemo } from 'react';
+    import Card from './Card';
+    import './category.css';
+    
+    function isVisible({ top, height, offset, index }) {
+      return (top  +  offset  +  height  >=  0  &&  top  -  offset  <=  window.innerHeight);
+    }
+    
+    function Category({ title, description, items, index, virtualized }) {
+      const [isContainerVisible, setIsContainerVisible] = useState(index < 2);
+      const [isCardVisible, setIsCardVisible] = useState(items.map(() => index < 2));
+      const containerRef = useRef(null);
+      const cardRef = useRef([]);
+    
+      useEffect(()  =>  { 
+        const isInViewport = () => {
+          const offset = 250;
+          if (containerRef.current) {
+            const { top, height } =  containerRef.current.getBoundingClientRect();
+            setIsContainerVisible(isVisible({ top, height, offset }));
+          } else {
+            setIsContainerVisible(false);
+          }
+      
+          const cardVisibility = items.map((_, itemIndex) => {
+            const card = cardRef.current[itemIndex];
+            if (card) {
+              const { top, height } = card.getBoundingClientRect();
+              return isVisible({ top, height, offset });
+            }
+            return index < 2;
+          });
+          setIsCardVisible(cardVisibility);
+        };
+    
+        isInViewport();
+        window.addEventListener('scroll',  isInViewport);
+    
+        return  ()  =>  {
+          window.removeEventListener('scroll',  isInViewport);
+        };
+      },  [index, items]);
+    
+      const containerHeight = useMemo(()  =>  {
+        return Math.ceil(items.length  /  2  -  1)  *  30 + Math.ceil(items.length  /  2)  *  160;    
+        }, [items.length]);
+    
+      return (
+        <div className="category">
+          <div className="category__title">{title}</div>
+          <div className="category__description">{description}</div>
+          <ul className="category__container" ref={containerRef} style={{ height: containerHeight }}>
+            {(!virtualized || isContainerVisible) &&
+              items.map((item, itemIndex) => (
+                <li style={{ height: 160 }} key={`menu-item-${item.id}`} ref={ref => { cardRef.current[itemIndex] = ref; }}>
+                  {(!virtualized || isCardVisible) && <Card {...item} />}
+                </li>)
+              )
+            }
+          </ul>
+        </div>
+      );
+    }
+    
+    export default Category;
 
-### Analyzing the Bundle Size
+## How better is our page
+The page went from 33124 to 1078 dom-nodes, an improvement of 3000% on dom-nodes count! As seen on [google documentation](https://developers.google.com/web/tools/lighthouse/audits/dom-size) a page should not have more than 1500 nodes wich can reflect drasticaly on performance.
 
-This section has moved here: https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size
+To improve performance we can call the throttle the isInViewport with 16ms, what means it gets called once each 16ms, or 60 times per secont, matching the screen update rate.
 
-### Making a Progressive Web App
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app
-
-### Advanced Configuration
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/advanced-configuration
-
-### Deployment
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/deployment
-
-### `yarn build` fails to minify
-
-This section has moved here: https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify
+We can listen for screen width change to recalculate our heights and work with responsivity. 

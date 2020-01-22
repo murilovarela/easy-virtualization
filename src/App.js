@@ -5,7 +5,7 @@ import './App.css';
 
 function App() {
   const [domCount, setDomCount] = useState(0);
-  const [isVirtualized, setIsVirtualized] = useState(false);
+  const [isVirtualized, setIsVirtualized] = useState(true);
 
   useEffect(()  =>  { 
     const updateDomCount = () => {
@@ -22,7 +22,7 @@ function App() {
 
   return (
     <div className="App">
-      {DATA_MOCK.map((category, index) => <Category key={category.id} {...category} virtualized={true} index={index} />)}
+      {DATA_MOCK.map((category, index) => <Category key={category.id} {...category} virtualized={isVirtualized} index={index} />)}
       <div className="dom-count">
         {`${domCount} dom-nodes`}
         <button onClick={() => setIsVirtualized(!isVirtualized)} className="dom-count__btn">
