@@ -1,9 +1,16 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import throttle from 'lodash/throttle';
 import Card from './Card';
 import './category.css';
 
-function isVisible({ top, height, offset, index }) {
+function isVisible({ top, height, offset }) {
   return (top  +  offset  +  height  >=  0  &&  top  -  offset  <=  window.innerHeight);
+}
+
+function isVisible2({ offsetTop, offsetHeight, offset }) {
+  const distanceFromTop = offsetTop + offsetHeight + offset - window.pageYOffset;
+  const distanceFromBottom = offsetTop - window.pageYOffset - offset - window.innerHeight;
+  return (distanceFromTop  >=  0  &&  distanceFromBottom  <=  0);
 }
 
 function Category({ title, description, items, index, virtualized }) {
@@ -11,36 +18,46 @@ function Category({ title, description, items, index, virtualized }) {
   const [isCardVisible, setIsCardVisible] = useState(items.map(() => index < 2));
   const containerRef = useRef(null);
   const cardRef = useRef([]);
+  const invisibleItems = useMemo(() => {
+    let cardVisibility = [];
+    for (let i = 0; i < items.length; ++i) cardVisibility[i] = false;
 
+    return cardVisibility;
+  }, [items.length]);
   useEffect(()  =>  { 
-    const isInViewport = () => {
+    const isInViewport = throttle(() => {
       const offset = 250;
+      let containerVisibility = false;
       if (containerRef.current) {
-        const { top, height } =  containerRef.current.getBoundingClientRect();
-        setIsContainerVisible(isVisible({ top, height, offset }));
-      } else {
-        setIsContainerVisible(false);
+        const { offsetTop, offsetHeight } = containerRef.current;
+        containerVisibility = isVisible2({ offsetTop, offsetHeight, offset });
       }
-  
-      const cardVisibility = items.map((_, itemIndex) => {
-        const card = cardRef.current[itemIndex];
-        if (card) {
-          const { top, height } = card.getBoundingClientRect();
-          return isVisible({ top, height, offset });
-        }
-        return index < 2;
-      });
+      setIsContainerVisible(containerVisibility);
+      
+      let cardVisibility = [];
+      if (containerVisibility) {
+        cardVisibility = items.map((_, itemIndex) => {
+          const card = cardRef.current[itemIndex];
+          if (card) {
+            const { offsetTop, offsetHeight } = card;
+            return isVisible2({ offsetTop, offsetHeight, offset });
+          }
+          return index < 2;
+        });
+      } else {
+        cardVisibility = invisibleItems;
+      }
       setIsCardVisible(cardVisibility);
-    };
+    }, 16);
     
     // we run the function to measure the visibility as soon as the component mount
     isInViewport();
-    window.addEventListener('scroll',  isInViewport);
+    window.addEventListener('scroll',  isInViewport, true);
 
     return  ()  =>  {
-      window.removeEventListener('scroll',  isInViewport);
+      window.removeEventListener('scroll',  isInViewport, true);
     };
-  },  [index, items]);
+  },  [index, invisibleItems, items]);
 
   const containerHeight = useMemo(()  =>  {
     return Math.ceil(items.length  /  2  -  1)  *  30 + Math.ceil(items.length  /  2)  *  160;    
@@ -54,7 +71,7 @@ function Category({ title, description, items, index, virtualized }) {
         {(!virtualized || isContainerVisible) &&
           items.map((item, itemIndex) => (
             <li style={{ height: 160 }} key={`menu-item-${item.id}`} ref={ref => { cardRef.current[itemIndex] = ref; }}>
-              {(!virtualized || isCardVisible) && <Card {...item} />}
+              {(!virtualized || isCardVisible[itemIndex]) && <Card {...item} />}
             </li>)
           )
         }
