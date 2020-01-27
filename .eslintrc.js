@@ -9,7 +9,7 @@ module.exports = {
 	'extends': [
 		'eslint:recommended',
 		'plugin:react/all',
-		'plugin:prettier/recommended',
+		'plugin:prettier/recommended'
 	],
 	'settings': {
     'react': {
@@ -30,7 +30,8 @@ module.exports = {
 	},
 	'plugins': [
 		'react',
-		'prettier'
+		'prettier',
+		'react-hooks'
 	],
 	'rules': {
 		'linebreak-style': [
@@ -56,6 +57,7 @@ module.exports = {
 		'react/jsx-max-depth': ['off'],
 		'react/jsx-props-no-spreading': ['off'],
 		'react/forbid-prop-types': ['off'],
-		'react/jsx-sort-props': ['off']
+		'react/jsx-sort-props': ['off'],
+		'react/jsx-no-bind': ['off']
 	}
 }
