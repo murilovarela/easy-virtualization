@@ -1,4 +1,5 @@
 import React from 'react';
+import PropTypes from 'prop-types';
 import './card.css';
 
 function Card({ title, imageUrl, description, price, isSale }) {
@@ -12,5 +13,13 @@ function Card({ title, imageUrl, description, price, isSale }) {
     </div>
   );
 }
+
+Card.propTypes = {
+  description: PropTypes.string.isRequired,
+  imageUrl: PropTypes.string.isRequired,
+  isSale: PropTypes.bool.isRequired,
+  price: PropTypes.number.isRequired,
+  title: PropTypes.string.isRequired,
+};
 
 export default Card;
