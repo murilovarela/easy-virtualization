@@ -6,15 +6,16 @@ There are a few libraries available if you need to virtualize long lists and imp
 ## The virtualization principle
 
 Do not render it if it is not in our field of view. The picture below exemplifies how we can deal with it.
-![enter image description here](/virtualization-diagram.png)
+
+![virtualization diagram](/virtualization-diagram.png)
 
 ## Let's code!
-You can start by downloading the problematic code from [here](), and follow the solution thinking.
+You can start by downloading the problematic code from [here](https://github.com/murilovarela/easy-virtualization/tree/problematic-code), and follow the solution thinking.
 
 ### 1. The problem
 In this project, I faced a page with a large number of product cards that was fine for restaurants, which doesn't have many products, but once that same page started to be used by large grocery stores with thousands of products, the page became slow and our challenge is to virtualize that page to make user experience better. 
 
-### The solution
+### 2. The solution
 To begin we need a function that will tell us if the components in our list are visible or not. We can achieve that by checking if: 
 
 1) the distance from the bottom of our component to the top of the page is greater than zero; and 
@@ -29,7 +30,7 @@ function isVisible({ top, offset, height }) {
 }
 ```
 
-### Listening to the scroll event
+### 3. Listening to the scroll event
 Now that we know the math to calculate if the component is visible, it's time to attach a function to listen to the scroll event. 
 ```js
 useEffect(() => {
@@ -42,7 +43,7 @@ useEffect(() => {
 }, [isInViewport]);
 ```
 
-### Referencing the category container
+### 4. Referencing the category container
 With the useRef hook, we have access to the container *rect* information that is needed in the isVisible function, so we can set its visibility to a state.
 ```js
 const  [isContainerVisible, setIsContainerVisible] =  useState(index  <  2);
@@ -59,7 +60,7 @@ const isInViewport = useCallback(() => {
 }, [items]);
 ```
 
-### Calculating the category container hight 
+### 5. Calculating the category container hight 
 To avoid having the page changing height, we must calculate the container height. In this case, we have a grid with two columns and each card with 260px of height and a gap of 30px.
 ```js
 const listHeight = useMemo(() => {
@@ -73,7 +74,7 @@ const listHeight = useMemo(() => {
 }, [items.length]);
 ```
 
-And if we add a hook to listen for resizing, we can make ir work with the responsivity. The code for useResizeObserver is found in [here]().
+And if we add a hook to listen for resizing, we can make ir work with the responsivity. The code for useResizeObserver is found in [here](https://github.com/murilovarela/easy-virtualization/blob/master/src/hooks/useResizeObserver.js).
 ```js
 const  [wrapperRef, wrapperWidth] =  useResizeObserver();
 
@@ -89,7 +90,7 @@ const listHeight = useMemo(() => {
 }, [items.length, wrapperWidth]);
 ```
 
-### Virtualizing the items
+### 6. Virtualizing the items
 The items ref must be an array, so we can evaluate all of then at each *isInViewport* call easily. 
 ```js
 const allCardsInvisible = useMemo(() => {
@@ -271,6 +272,6 @@ export default Card;
 ## How better is our page
 The page went from 33124 to 1078 dom-nodes, an improvement of 3000% on dom-nodes count! As seen on [google documentation](https://developers.google.com/web/tools/lighthouse/audits/dom-size) a page should not have more than 1500 nodes wich can reflect drastically on performance.
 
-To improve performance we can call the throttle the ~isInViewport~ with 16ms, what means it gets called once each 16ms, or 60 times per second, matching the screen update rate.
+To improve performance we can call the throttle the *isInViewport* with 16ms, what means it gets called once each 16ms, or 60 times per second, matching the screen update rate.
  
 Adding fewer listeners would also improve page performance. Now we are adding 100 listeners to the scroll, which may not be a very good approach, once it can slow down the page, but still not as bad as 33k dom-nodes being rendered at the same time.
