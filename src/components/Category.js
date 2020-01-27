@@ -4,7 +4,9 @@ import useResizeObserver from '../hooks/useResizeObserver';
 import Card from './Card';
 import './category.css';
 
-const isVisible = ({ top, offset, height }) => top + offset + height >= 0 && top - offset <= window.innerHeight;
+function isVisible({ top, offset, height }) {
+  return top + offset + height >= 0 && top - offset <= window.innerHeight;
+}
 function Category({ title, description, items, index }) {
   const allCardsInvisible = useMemo(() => {
     const cardVisibility = [];
@@ -23,9 +25,9 @@ function Category({ title, description, items, index }) {
     const itemHeight = 160;
     const gap = isMobile ? 0 : 10;
     const lastGap = isMobile ? 0 : 10;
-    const gapsHeight = Math.ceil(items.length / gridColumns - 1) * gap + lastGap;
-    const itemsHeight = Math.ceil(items.length / gridColumns) * itemHeight;
-    return { containerHeight: itemsHeight + gapsHeight, itemHeight };
+    const containerHeight =
+      Math.ceil(items.length / gridColumns - 1) * gap + lastGap + Math.ceil(items.length / gridColumns) * itemHeight;
+    return { containerHeight, itemHeight };
   }, [items.length, wrapperWidth]);
 
   const isInViewport = useCallback(() => {
